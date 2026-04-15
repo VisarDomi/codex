@@ -2,6 +2,7 @@ use super::*;
 use crate::SkillLoadOutcome;
 use crate::config::GhostSnapshotConfig;
 use crate::environment_selection::ResolvedTurnEnvironments;
+use crate::tools::output_limits::effective_tool_output_token_limit;
 use codex_model_provider::SharedModelProvider;
 use codex_model_provider::create_model_provider;
 use codex_protocol::SessionId;
@@ -135,6 +136,17 @@ impl TurnContext {
         self.effective_reasoning_effort()
             .map(|effort| effort.to_string())
             .unwrap_or_else(|| "default".to_string())
+    }
+
+    pub(crate) fn effective_tool_output_token_limit(
+        &self,
+        requested_max_output_tokens: Option<usize>,
+    ) -> usize {
+        effective_tool_output_token_limit(
+            requested_max_output_tokens,
+            self.config.tool_output_token_limit,
+            self.truncation_policy,
+        )
     }
 
     pub(crate) fn model_context_window(&self) -> Option<i64> {

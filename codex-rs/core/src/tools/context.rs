@@ -5,8 +5,8 @@ use crate::session::turn_context::TurnContext;
 use crate::tools::TELEMETRY_PREVIEW_MAX_BYTES;
 use crate::tools::TELEMETRY_PREVIEW_MAX_LINES;
 use crate::tools::TELEMETRY_PREVIEW_TRUNCATION_NOTICE;
+use crate::tools::output_limits::resolve_max_output_tokens;
 use crate::turn_diff_tracker::TurnDiffTracker;
-use crate::unified_exec::resolve_max_tokens;
 use codex_protocol::mcp::CallToolResult;
 use codex_protocol::models::DEFAULT_IMAGE_DETAIL;
 use codex_protocol::models::FunctionCallOutputBody;
@@ -454,7 +454,7 @@ impl ToolOutput for ExecCommandToolOutput {
 impl ExecCommandToolOutput {
     pub(crate) fn truncated_output(&self) -> String {
         let text = String::from_utf8_lossy(&self.raw_output).to_string();
-        let max_tokens = resolve_max_tokens(self.max_output_tokens);
+        let max_tokens = resolve_max_output_tokens(self.max_output_tokens);
         formatted_truncate_text(&text, TruncationPolicy::Tokens(max_tokens))
     }
 

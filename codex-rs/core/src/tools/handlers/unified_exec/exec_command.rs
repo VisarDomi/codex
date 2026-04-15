@@ -31,7 +31,6 @@ use codex_utils_output_truncation::approx_token_count;
 
 use super::ExecCommandArgs;
 use super::ExecCommandEnvironmentArgs;
-use super::effective_max_output_tokens;
 use super::get_command;
 use super::post_unified_exec_tool_use_payload;
 
@@ -165,8 +164,7 @@ impl ToolHandler for ExecCommandHandler {
             prefix_rule,
             ..
         } = args;
-        let max_output_tokens =
-            effective_max_output_tokens(max_output_tokens, turn.truncation_policy);
+        let max_output_tokens = turn.effective_tool_output_token_limit(max_output_tokens);
 
         let exec_permission_approvals_enabled =
             session.features().enabled(Feature::ExecPermissionApprovals);

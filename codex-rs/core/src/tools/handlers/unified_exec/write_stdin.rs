@@ -12,7 +12,6 @@ use codex_protocol::protocol::TerminalInteractionEvent;
 use codex_tools::ToolName;
 use serde::Deserialize;
 
-use super::effective_max_output_tokens;
 use super::post_unified_exec_tool_use_payload;
 
 #[derive(Debug, Deserialize)]
@@ -74,8 +73,7 @@ impl ToolHandler for WriteStdinHandler {
         };
 
         let args: WriteStdinArgs = parse_arguments(&arguments)?;
-        let max_output_tokens =
-            effective_max_output_tokens(args.max_output_tokens, turn.truncation_policy);
+        let max_output_tokens = turn.effective_tool_output_token_limit(args.max_output_tokens);
         let response = session
             .services
             .unified_exec_manager
