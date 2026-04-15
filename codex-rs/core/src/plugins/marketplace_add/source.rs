@@ -128,6 +128,7 @@ fn looks_like_local_path(source: &str) -> bool {
     source.starts_with("./")
         || source.starts_with("../")
         || source.starts_with('/')
+        || looks_like_windows_absolute_path(source)
         || source.starts_with("~/")
         || source == "."
         || source == ".."
@@ -136,7 +137,7 @@ fn looks_like_local_path(source: &str) -> bool {
 
 fn resolve_local_source_path(source: &str) -> Result<PathBuf, MarketplaceAddError> {
     let path = expand_tilde_path(source);
-    let path = if path.is_absolute() {
+    let path = if path.is_absolute() || looks_like_windows_absolute_path(source) {
         path
     } else {
         std::env::current_dir()
@@ -148,7 +149,7 @@ fn resolve_local_source_path(source: &str) -> Result<PathBuf, MarketplaceAddErro
             .join(path)
     };
 
-    if !path.exists() && path.is_absolute() {
+    if !path.exists() && (path.is_absolute() || looks_like_windows_absolute_path(source)) {
         return Ok(path);
     }
 
@@ -158,6 +159,14 @@ fn resolve_local_source_path(source: &str) -> Result<PathBuf, MarketplaceAddErro
             path.display()
         ))
     })
+}
+
+fn looks_like_windows_absolute_path(source: &str) -> bool {
+    let bytes = source.as_bytes();
+    matches!(
+        bytes,
+        [drive, b':', b'/' | b'\\', ..] if drive.is_ascii_alphabetic()
+    ) || source.starts_with("\\\\")
 }
 
 fn expand_tilde_path(source: &str) -> PathBuf {
@@ -316,7 +325,6 @@ mod tests {
         assert!(path.is_absolute());
     }
 
-    #[cfg(windows)]
     #[test]
     fn windows_absolute_path_source_parses() {
         let source =
@@ -327,6 +335,35 @@ mod tests {
             MarketplaceSource::Local {
                 path: PathBuf::from(r"C:\temp\marketplace"),
             }
+        );
+    }
+
+    #[test]
+    fn windows_absolute_path_with_mixed_separators_is_local() {
+        let source = parse_marketplace_source(
+            r"C:\Users\RUNNER~1\AppData\Local\Temp\.tmpaBs4Fv\.agents/plugins/marketplace.json",
+            /*explicit_ref*/ None,
+        )
+        .unwrap();
+
+        assert_eq!(
+            source,
+            MarketplaceSource::Local {
+                path: PathBuf::from(
+                    r"C:\Users\RUNNER~1\AppData\Local\Temp\.tmpaBs4Fv\.agents/plugins/marketplace.json"
+                ),
+            }
+        );
+    }
+
+    #[test]
+    fn windows_drive_relative_path_is_not_local() {
+        let err = parse_marketplace_source(r"C:marketplace", /*explicit_ref*/ None).unwrap_err();
+
+        assert!(
+            err.to_string()
+                .contains("invalid marketplace source format"),
+            "unexpected error: {err}"
         );
     }
 
